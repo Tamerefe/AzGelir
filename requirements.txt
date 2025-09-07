@@ -1,1 +1,4 @@
 PyQt5>=5.15.0
+pyinstaller>=4.0
+PyYAML>=5.0
+pywin32>=227

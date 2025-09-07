@@ -1,0 +1,81 @@
+name: azgelir
+base: core20
+version: '1.0.0'
+summary: Gelir ve Gider Takip Uygulaması
+description: |
+  AzGelir, PyQt5 kullanılarak geliştirilmiş modern bir gelir/gider takip sistemidir.
+  Muhasebe odaklı, erişilebilir ve kullanıcı dostu arayüzü ile finansal kayıtlarınızı
+  kolayca takip edebilirsiniz.
+
+  Özellikler:
+  • Gelir ve gider kayıtları
+  • KDV hesaplama (%1, %10, %18)
+  • Tarih aralığı filtresi
+  • CSV dışa aktarma
+  • SQLite veritabanı
+  • Modern ve responsive arayüz
+
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+
+apps:
+  azgelir:
+    command: bin/AzGelir
+    desktop: usr/share/applications/azgelir.desktop
+    plugs:
+      - home
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - network
+      - removable-media
+
+parts:
+  azgelir:
+    plugin: python
+    source: .
+    python-requirements:
+      - requirements.txt
+    stage-packages:
+      - python3-pyqt5
+      - python3-pyqt5.qtwidgets
+      - python3-pyqt5.qtcore
+      - python3-pyqt5.qtgui
+      - libqt5widgets5
+      - libqt5gui5
+      - libqt5core5a
+    override-build: |
+      snapcraftctl build
+      
+      # Ana Python dosyasını çalıştırılabilir yapı
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp main.py $SNAPCRAFT_PART_INSTALL/bin/AzGelir
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/AzGelir
+      
+      # Logo ve veritabanı dosyalarını kopyala
+      cp logo.png $SNAPCRAFT_PART_INSTALL/bin/ || echo "Logo dosyası bulunamadı"
+      cp records.db $SNAPCRAFT_PART_INSTALL/bin/ || echo "Veritabanı dosyası bulunamadı"
+      
+      # Desktop dosyası oluştur
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/applications
+      cat > $SNAPCRAFT_PART_INSTALL/usr/share/applications/azgelir.desktop << 'EOF'
+      [Desktop Entry]
+      Type=Application
+      Name=AzGelir
+      Name[tr]=AzGelir - Gelir/Gider Takip
+      Comment=Gelir ve Gider Takip Uygulaması
+      Comment[tr]=Muhasebe odaklı gelir ve gider takip sistemi
+      Exec=azgelir
+      Icon=${SNAP}/bin/logo.png
+      Terminal=false
+      StartupWMClass=AzGelir
+      Categories=Office;Finance;
+      Keywords=gelir;gider;muhasebe;finans;
+      EOF
+      
+      # Python shebang ekle
+      sed -i '1i#!/usr/bin/env python3' $SNAPCRAFT_PART_INSTALL/bin/AzGelir
