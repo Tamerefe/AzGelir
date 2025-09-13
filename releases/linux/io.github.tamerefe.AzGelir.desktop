@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AzGelir
+Comment=Gelir ve Gider Takip Uygulaması
+Exec=azgelir
+Icon=io.github.tamerefe.AzGelir
+StartupWMClass=AzGelir
+Categories=Office;Finance;

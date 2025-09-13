@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>azgelir</id>
+    <version>1.0.0</version>
+    <packageSourceUrl>https://github.com/Tamerefe/AzGelir</packageSourceUrl>
+    <owners>Tamerefe</owners>
+    <title>AzGelir</title>
+    <authors>Tamerefe</authors>
+    <projectUrl>https://github.com/Tamerefe/AzGelir</projectUrl>
+    <licenseUrl>https://github.com/Tamerefe/AzGelir/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/Tamerefe/AzGelir</projectSourceUrl>
+    <tags>finance accounting income expense tracking turkish</tags>
+    <summary>Gelir ve Gider Takip Uygulaması</summary>
+    <description>
+AzGelir, PyQt5 kullanılarak geliştirilmiş modern bir gelir/gider takip sistemidir. 
+Muhasebe odaklı, erişilebilir ve kullanıcı dostu arayüzü ile finansal kayıtlarınızı 
+kolayca takip edebilirsiniz.
+
+## Özellikler
+- Gelir ve gider kayıtları
+- KDV hesaplama (%1, %10, %18)  
+- Tarih aralığı filtresi
+- CSV dışa aktarma
+- SQLite veritabanı
+- Modern ve responsive arayüz
+
+## Kullanım
+Kurulumdan sonra Başlat menüsünden "AzGelir" uygulamasını arayın.
+    </description>
+    <releaseNotes>İlk sürüm</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

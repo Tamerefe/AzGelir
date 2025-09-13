@@ -1,0 +1,47 @@
+{
+    "app-id": "io.github.tamerefe.AzGelir",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "21.08",
+    "sdk": "org.freedesktop.Sdk",
+    "command": "azgelir",
+    "finish-args": [
+        "--socket=wayland",
+        "--socket=x11",
+        "--share=ipc",
+        "--device=dri",
+        "--filesystem=home",
+        "--filesystem=xdg-documents"
+    ],
+    "modules": [
+        {
+            "name": "python3-pyqt5",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --no-index --find-links=file://${PWD} --prefix=${FLATPAK_DEST} PyQt5"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/source/P/PyQt5/PyQt5-5.15.7.tar.gz",
+                    "sha256": "755121a52b3a08cb07275c10ebb96576d36e320e572591db16cfdbc558101594"
+                }
+            ]
+        },
+        {
+            "name": "azgelir",
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -Dm755 main.py ${FLATPAK_DEST}/bin/azgelir",
+                "install -Dm644 logo.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.tamerefe.AzGelir.png",
+                "install -Dm644 io.github.tamerefe.AzGelir.desktop ${FLATPAK_DEST}/share/applications/io.github.tamerefe.AzGelir.desktop",
+                "install -Dm644 io.github.tamerefe.AzGelir.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.tamerefe.AzGelir.metainfo.xml"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}

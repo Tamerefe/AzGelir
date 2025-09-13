@@ -1,196 +1,132 @@
-# 📁 AzGelir Proje Klasör Yapısı
+# AzGelir - Proje Yapısı
 
-## 🏗️ Ana Proje Dosyaları
+## 📁 Klasör Organizasyonu
+
 ```
-/AzGelir/
-├── main.py                  # Ana uygulama kodu
-├── logo.png                 # Uygulama logosu
-├── records.db               # Veritabanı dosyası
-├── requirements.txt         # Python bağımlılıkları
-├── README.md               # Ana dokümantasyon
-├── .gitattributes          # Git yapılandırması
-└── AzGelir_Setup.exe       # Sıfırdan kurulum dosyası (53 MB)
-```
-
-## 📂 Klasör Açıklamaları
-
-### 🔨 `/build_scripts/` - Derleme Araçları
-- **Tüm platform derleyicileri** 
-- **Kurulum dosyası oluşturucuları**
-- **Otomatik build scriptleri**
-
-**Dosyalar:**
-```
-build_linux.py              # Linux için PyInstaller
-build_windows.py             # Windows için PyInstaller
-build_appimage.py           # Linux AppImage
-build_snap.py               # Ubuntu Snap paketi
-build_msi.py                # Windows MSI kurulum
-build_all_linux.py          # Tüm Linux formatları
-build_all_windows.py        # Tüm Windows formatları
-create_simple_setup.py      # Ana kurulum exe oluşturucu
-create_ultimate_installer.py # Gelişmiş kurulum sistemi
-create_full_installer.py    # Tam özellikli kurulum
-create_single_exe_installer.bat # Batch kurulum oluşturucu
-```
-
-### 🚀 `/installers/` - Kurulum Dosyaları
-- **Platform özel kurucular**
-- **Otomatik kurulum scriptleri**
-- **Paket yöneticisi dosyaları**
-
-**Dosyalar:**
-```
-setup_linux.sh             # Linux otomatik kurulum
-setup_windows.bat          # Windows otomatik kurulum
-install_linux.sh           # Linux manuel kurulum
-installer.nsi               # NSIS Windows installer
-snapcraft.yaml             # Snap paketi manifest
-```
-
-### 📊 `/dist/` - Derlenen Dosyalar
-- **PyInstaller çıktıları**
-- **Platform özel executable'lar**
-- **Dağıtım için hazır dosyalar**
-
-**İçerik:**
-```
-AzGelir.exe                 # Windows ana uygulama
-AzGelir_Baslat.bat         # Windows portable başlatıcı
-install.ps1                # PowerShell kurulum
-README_Windows.md          # Windows kullanım kılavuzu
-LICENSE.txt                # Lisans dosyası
-```
-
-### 🛠️ `/tools/` - Yardımcı Araçlar
-- **Proje yönetim araçları**
-- **Test ve dağıtım utilities**
-- **Kullanıcı araçları**
-
-**Planlanan dosyalar:**
-```
-kurulum_yoneticisi.bat     # Kurulum test ve yönetim
-basla.bat                  # Hızlı başlatıcı
-update_checker.py          # Güncelleme kontrolü
-project_manager.py         # Proje yöneticisi
+AzGelir/
+├── 📄 main.py                 # Ana uygulama kodu
+├── 📄 requirements.txt        # Python bağımlılıkları
+├── 📄 README.md              # Proje ana dökümanı
+├── 📄 records.db             # SQLite veritabanı
+├── 🖼️ logo.png               # Uygulama ikonu
+├── 📄 .gitattributes         # Git yapılandırması
+│
+├── 📁 releases/              # 🆕 Dağıtım Dosyaları
+│   ├── 📄 README.md         # Platform seçim rehberi
+│   ├── 📁 windows/          # Windows dağıtımı
+│   │   ├── 📄 AzGelir.exe           # Windows executable (38.5 MB)
+│   │   ├── 📄 AzGelir_Portable.zip  # Portable paket (39.6 MB)
+│   │   ├── 📁 AzGelir_Portable/     # Portable klasör
+│   │   ├── 📄 install.ps1           # PowerShell kurulum
+│   │   ├── 📄 installer.nsi         # NSIS installer script
+│   │   ├── 📁 chocolatey/           # Chocolatey paketi
+│   │   ├── 📄 LICENSE.txt           # Lisans dosyası
+│   │   └── 📄 README.md            # Windows kurulum rehberi
+│   │
+│   └── 📁 linux/            # Linux dağıtımı
+│       ├── 📁 AzGelir/              # Linux binary klasörü (1.6 MB)
+│       ├── 📄 install.sh            # Otomatik kurulum scripti
+│       ├── 📄 uninstall.sh          # Kaldırma scripti
+│       ├── 📄 AzGelir.desktop       # Desktop entry
+│       ├── 📄 io.github.tamerefe.AzGelir.json     # Flatpak manifest
+│       ├── 📄 io.github.tamerefe.AzGelir.desktop  # Flatpak desktop
+│       ├── 📄 io.github.tamerefe.AzGelir.metainfo.xml # App metadata
+│       ├── 📁 AzGelir.AppDir/       # AppImage yapı klasörü
+│       └── 📄 README.md            # Linux kurulum rehberi
+│
+├── 📁 build_scripts/        # Paketleme Scriptleri
+│   ├── 📄 build_windows.py         # Windows PyInstaller build
+│   ├── 📄 build_linux.py           # Linux PyInstaller build
+│   ├── 📄 build_all_windows.py     # Windows toplu build
+│   ├── 📄 build_all_linux.py       # Linux toplu build
+│   ├── 📄 build_msi.py             # MSI installer
+│   ├── 📄 build_appimage.py        # AppImage builder
+│   ├── 📄 build_snap.py            # Snap package builder
+│   ├── 📄 create_full_installer.py # Gelişmiş installer
+│   ├── 📄 create_simple_setup.py   # Basit setup
+│   ├── 📄 create_single_exe_installer.bat # Tek dosya installer
+│   ├── 📄 create_ultimate_installer.py    # Ultimate installer
+│   └── 📄 README.md                # Build script rehberi
+│
+├── 📁 docs/                 # Dokümantasyon
+│   ├── 📄 KURULUM_KILAVUZU.md      # Detaylı kurulum rehberi
+│   ├── 📄 KURULUM_SISTEMI_README.md # Kurulum sistemi detayları
+│   ├── 📄 KURULUM_SONUÇ_RAPORU.md  # Test raporları
+│   ├── 📄 LICENSE.txt              # Lisans detayları
+│   └── 📄 README_Windows.md        # Windows spesifik notlar
+│
+└── 📁 installers/          # Kurulum Scriptleri (Kaynak)
+    ├── 📄 install_linux.sh         # Linux manuel kurulum
+    ├── 📄 installer.nsi            # NSIS template
+    ├── 📄 setup_linux.sh           # Linux otomatik setup
+    ├── 📄 setup_windows.bat        # Windows otomatik setup
+    ├── 📄 snapcraft.yaml           # Snap paketi tanımı
+    └── 📄 README.md                # Installer rehberi
 ```
 
-### 📚 `/docs/` - Dokümantasyon
-- **Kullanım kılavuzları**
-- **Teknik dokümantasyon**
-- **Kurulum rehberleri**
+## 🎯 Yeni Organizasyon Mantığı
 
-**Planlanan dosyalar:**
-```
-KURULUM_KILAVUZU.md        # Kapsamlı kurulum rehberi
-KURULUM_SISTEMI_README.md  # Sıfırdan kurulum kılavuzu
-KURULUM_SONUÇ_RAPORU.md    # Tamamlanan özellikler
-README_Windows.md          # Windows özel dokümantasyon
-LICENSE.txt                # Proje lisansı
-API_DOCUMENTATION.md       # Geliştirici dokümantasyonu
-USER_MANUAL.md             # Kullanıcı kılavuzu
-TROUBLESHOOTING.md         # Sorun giderme rehberi
-```
+### 🔄 Ana Değişiklikler
 
-## 🎯 Kullanım Rehberi
+1. **📁 releases/ Klasörü Eklendi**
+   - Tüm kullanıma hazır dosyalar burda
+   - Platform bazlı ayrım (windows/, linux/)
+   - Her platform için ayrı README
 
-### 👤 Son Kullanıcı İçin
-```bash
-# Tek tık kurulum
-AzGelir_Setup.exe          # Sağ tık → Yönetici olarak çalıştır
+2. **🧹 Ana Dizin Temizlendi**
+   - Sadece kaynak kod ve geliştirme dosyaları
+   - Build artefaktları releases/ klasörüne taşındı
+   - Daha temiz repository görünümü
 
-# Platform özel kurulum
-./installers/setup_linux.sh    # Linux
-./installers/setup_windows.bat # Windows
-```
+3. **📋 Gelişmiş Dokümantasyon**
+   - Platform spesifik README'ler
+   - Net kurulum talimatları
+   - Kullanıcı dostu yönlendirmeler
 
-### 👨‍💻 Geliştirici İçin
-```bash
-# Ana uygulamayı çalıştır
-python main.py
+## 📦 Platform Dosya Dağılımı
 
-# Platform için derle
-python build_scripts/build_windows.py  # Windows
-python build_scripts/build_linux.py    # Linux
+### Windows (`releases/windows/`)
+- **Ana Dosya**: `AzGelir.exe` (38.5 MB standalone)
+- **Portable**: `AzGelir_Portable.zip` (39.6 MB)
+- **Kurulum**: PowerShell script, NSIS installer
+- **Paket Yöneticisi**: Chocolatey support
 
-# Kurulum dosyası oluştur
-python build_scripts/create_simple_setup.py
+### Linux (`releases/linux/`)
+- **Ana Dosya**: `AzGelir/AzGelir` (1.6 MB)
+- **Kurulum**: Bash script (`install.sh`)
+- **Desktop**: `.desktop` entry dosyaları
+- **Paket Formatları**: Flatpak manifest, AppImage yapısı
 
-# Tüm formatları derle
-python build_scripts/build_all_windows.py
-python build_scripts/build_all_linux.py
-```
+## 🔧 Geliştirici Notları
 
-### 🧪 Test ve Geliştirme
-```bash
-# Kurulum test et
-./tools/kurulum_yoneticisi.bat
+### Build İşlemi
+1. **Kaynak geliştirme**: Ana dizinde `main.py` üzerinde çalış
+2. **Build çalıştırma**: `build_scripts/` klasöründeki scriptleri kullan
+3. **Release oluşturma**: Build sonuçları otomatik olarak `releases/` klasörüne gider
 
-# Hızlı başlat
-./tools/basla.bat
+### Yeni Sürüm Çıkarma
+1. `main.py`'de değişiklikleri yap
+2. Windows build: `python build_scripts/build_all_windows.py`
+3. Linux build: `python build_scripts/build_all_linux.py`
+4. `releases/` klasörü GitHub'da dağıtıma hazır
 
-# Dağıtım paketi oluştur
-python build_scripts/create_distribution.py
-```
+## ✨ Kullanıcı Deneyimi
 
-## 📋 Dosya Boyutları ve Türleri
+**Yeni kullanıcılar için:**
+- `releases/README.md` → Platform seçimi
+- `releases/windows/README.md` → Windows kurulum
+- `releases/linux/README.md` → Linux kurulum
 
-### 🔢 Ana Dosyalar
-- **main.py:** 29 KB (Ana uygulama kodu)
-- **logo.png:** 1.4 MB (Yüksek kalite logo)
-- **records.db:** 12 KB (Veritabanı)
-- **AzGelir_Setup.exe:** 53.1 MB (Tam kurulum)
+**Geliştiriciler için:**
+- Ana `README.md` → Proje genel bilgisi
+- `build_scripts/README.md` → Build süreçleri
+- Bu dosya → Proje yapısı
 
-### 📦 Derlenen Dosyalar
-- **dist/AzGelir.exe:** 38.3 MB (Windows executable)
-- **Linux builds:** 35-45 MB (çeşitli formatlar)
-
-### 🔧 Build Scripts
-- **Toplam:** ~150 KB (11 script dosyası)
-- **En büyük:** create_full_installer.py (41 KB)
-
-## 🎮 Hızlı Komutlar
-
-### 🚀 En Hızlı Başlangıç
-```bash
-# Uygulamayı çalıştır
-python main.py
-
-# Kurulum exe'si oluştur
-python build_scripts/create_simple_setup.py
-
-# Dağıtım için hazırla
-./tools/kurulum_yoneticisi.bat
-```
-
-### 🔄 Güncelleme Süreci
-```bash
-# 1. Kodu güncelle
-git pull origin main
-
-# 2. Bağımlılıkları yükle
-pip install -r requirements.txt
-
-# 3. Test et
-python main.py
-
-# 4. Derle ve dağıt
-python build_scripts/build_all_windows.py
-```
-
-## 📞 Destek ve Geliştirme
-
-### 🐛 Hata Raporlama
-- **Ana uygulama hataları:** main.py logs
-- **Kurulum sorunları:** setup logs
-- **Build hataları:** build_scripts/ logs
-
-### 🔧 Geliştirme Ortamı
-- **Python 3.8+** gerekli
-- **PyQt5** GUI framework
-- **PyInstaller** derleme için
-- **Windows 10+** test için
+### 📊 Dosya Boyutları
+- **Windows Executable**: 38.5 MB
+- **Windows Portable**: 39.6 MB  
+- **Linux Binary**: 1.6 MB
+- **Kaynak Kod**: ~50 KB
 
 ---
-
-**🎉 Düzenli ve profesyonel proje yapısı hazır!**
+**Güncelleme**: Eylül 2025 - Hesap Yönetimi Sürümü v1.0.0

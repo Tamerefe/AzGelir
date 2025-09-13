@@ -69,7 +69,6 @@ def build_application(use_upx=False):
         "--hidden-import=sqlite3",
         "--hidden-import=csv",
         "--clean",                     # Önceki build'i temizle
-        "--optimize=2",                # Python optimizasyonu
     ]
     
     # Veritabanı dosyası varsa ekle

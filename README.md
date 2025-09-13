@@ -5,9 +5,10 @@ Bu uygulama, PyQt5 kullanılarak geliştirilmiş bir gelir/gider takip sistemidi
 ## Özellikler
 
 - ✅ Gelir ve gider kayıtlarını tutma
+- ✅ Kimden/Kime bilgisi ile detaylı takip
+- ✅ Renk kodlamalı görünüm (Gelir: yeşil, Gider: kırmızı)
 - ✅ Gelişmiş tarih seçimi (takvim popup, hızlı butonlar)
 - ✅ Tarih aralığı filtresi (son 30 gün varsayılan)
-- ✅ İsteğe bağlı KDV hesaplama (KDV Yok, %1, %10, %18)
 - ✅ Otomatik belge numarası oluşturma (G20250906001 formatında)
 - ✅ Farklı hesap türleri (Kasa, Banka, vb.)
 - ✅ Kategori bazlı gruplandırma
@@ -20,7 +21,25 @@ Bu uygulama, PyQt5 kullanılarak geliştirilmiş bir gelir/gider takip sistemidi
 
 ## Kurulum
 
-### 🚀 Hızlı Kurulum
+## 📦 İndirme ve Kurulum
+
+### 🚀 Hızlı İndirme (Önerilen)
+
+**Windows Kullanıcıları:**
+- **Portable Sürüm**: [`releases/windows/AzGelir_Portable.zip`](releases/windows/AzGelir_Portable.zip) - Kurulum gerektirmez
+- **Standalone EXE**: [`releases/windows/AzGelir.exe`](releases/windows/AzGelir.exe) - Tek dosya (38.5 MB)
+
+**Linux Kullanıcıları:**
+- **Otomatik Kurulum**: [`releases/linux/`](releases/linux/) klasörünü indirin ve `install.sh` çalıştırın
+- **Manuel**: [`releases/linux/AzGelir/`](releases/linux/AzGelir/) binary'sini çalıştırın
+
+### 📋 Detaylı Kurulum Rehberi
+
+- **Windows**: [`releases/windows/README.md`](releases/windows/README.md)
+- **Linux**: [`releases/linux/README.md`](releases/linux/README.md)
+- **Genel**: [`releases/README.md`](releases/README.md)
+
+### 🛠️ Kaynak Koddan Derleme
 
 #### Linux:
 ```bash
@@ -37,45 +56,16 @@ cd AzGelir
 setup_windows.bat
 ```
 
-### 📖 Detaylı Kurulum Kılavuzu
+### 📖 Gelişmiş Kurulum
 
-Kapsamlı kurulum talimatları için: **[KURULUM_KILAVUZU.md](KURULUM_KILAVUZU.md)**
-
-### 📋 Hızlı Başlangıç
-
-#### Gereksinimler:
-- Python 3.6+
-- PyQt5
-- SQLite3 (Python ile gelir)
-
-#### Manuel Kurulum:
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-### Gereksinimler
-- Python 3.7 veya üzeri
-- PyQt5
-
-### Adımlar
-
-1. Gerekli kütüphaneleri yükleyin:
-```bash
-pip install -r requirements.txt
-```
-
-2. Uygulamayı çalıştırın:
-```bash
-python main.py
-```
+Kapsamlı kurulum talimatları için: **[docs/KURULUM_KILAVUZU.md](docs/KURULUM_KILAVUZU.md)**
 
 ## Kullanım
 
 1. **Yeni Kayıt Ekleme:**
    - Tarih seçin (takvim popup veya "Bugün"/"Dün" butonları)
    - Tür (Gelir/Gider), tutar bilgilerini girin
-   - İsteğe bağlı KDV oranını seçin (KDV Yok, %1, %10, %18)
+   - Kimden/Kime bilgisini ekleyin (gelir için "Kimden", gider için "Kime" otomatik değişir)
    - Hesap türü ve kategori seçin
    - Belge numarası otomatik oluşturulur (örn: G06.09.2025001)
    - Açıklama ekleyin ve "Kaydet" butonuna tıklayın
@@ -127,9 +117,9 @@ Uygulama SQLite veritabanı kullanır. `records.db` dosyası otomatik olarak olu
 
 Uygulama modern ve kullanıcı dostu bir arayüze sahiptir:
 - Temiz form alanları
-- Tablo görünümü
-- Özet bilgiler
-- KDV hesaplama
+- Renk kodlamalı tablo görünümü (Gelir: yeşil, Gider: kırmızı)
+- Dinamik özet bilgiler (renkli bakiye gösterimi)
+- Otomatik etiket güncellemesi (Kimden/Kime)
 
 ## Linux Paketleme
 

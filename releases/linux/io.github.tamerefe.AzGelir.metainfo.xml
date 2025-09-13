@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.tamerefe.AzGelir</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>AzGelir</name>
+  <summary>Gelir ve Gider Takip Uygulaması</summary>
+  <description>
+    <p>
+      AzGelir, PyQt5 kullanılarak geliştirilmiş modern bir gelir/gider takip sistemidir.
+      Muhasebe odaklı, erişilebilir ve kullanıcı dostu arayüzü ile finansal kayıtlarınızı
+      kolayca takip edebilirsiniz.
+    </p>
+  </description>
+  <categories>
+    <category>Office</category>
+    <category>Finance</category>
+  </categories>
+  <url type="homepage">https://github.com/Tamerefe/AzGelir</url>
+  <developer_name>Tamerefe</developer_name>
+  <releases>
+    <release version="1.0.0" date="2025-09-06"/>
+  </releases>
+</component>

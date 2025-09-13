@@ -44,7 +44,7 @@ def build_standard():
     """Standart Linux paketi (PyInstaller)"""
     print("\n🐧 Standart Linux paketi oluşturuluyor...")
     try:
-        subprocess.check_call([sys.executable, "build_linux.py"])
+        subprocess.check_call([sys.executable, "build_scripts/build_linux.py"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Standart paket oluşturma hatası: {e}")
@@ -54,7 +54,7 @@ def build_appimage():
     """AppImage paketi"""
     print("\n📦 AppImage paketi oluşturuluyor...")
     try:
-        subprocess.check_call([sys.executable, "build_appimage.py"])
+        subprocess.check_call([sys.executable, "build_scripts/build_appimage.py"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ AppImage oluşturma hatası: {e}")
@@ -64,7 +64,7 @@ def build_snap():
     """Snap paketi"""
     print("\n🫰 Snap paketi oluşturuluyor...")
     try:
-        subprocess.check_call([sys.executable, "build_snap.py"])
+        subprocess.check_call([sys.executable, "build_scripts/build_snap.py"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Snap oluşturma hatası: {e}")

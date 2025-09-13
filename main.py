@@ -13,10 +13,11 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QGroupBox, QLabel, QLineEdit, QComboBox, QDateEdit,
     QDoubleSpinBox, QPushButton, QTableWidget, QTableWidgetItem,
-    QMessageBox, QHeaderView, QFileDialog, QAbstractItemView
+    QMessageBox, QHeaderView, QFileDialog, QAbstractItemView,
+    QDialog, QFormLayout, QDialogButtonBox
 )
 from PyQt5.QtCore import Qt, QDate, QTimer
-from PyQt5.QtGui import QFont, QPalette, QPixmap, QIcon
+from PyQt5.QtGui import QFont, QPalette, QPixmap, QIcon, QColor, QBrush
 
 
 class IncomeExpenseWidget(QMainWindow):
@@ -62,8 +63,9 @@ class IncomeExpenseWidget(QMainWindow):
         # Sinyal bağlantıları
         self.connect_signals()
         
-        # İlk belge numarası önizlemesi
+        # İlk belge numarası önizlemesi ve etiket güncellemesi
         self.update_doc_number_preview()
+        self.update_from_to_label()
 
     def set_window_icon(self):
         """Pencere ve taskbar ikonunu logo ile ayarla"""
@@ -107,23 +109,209 @@ class IncomeExpenseWidget(QMainWindow):
         """Veritabanını başlat"""
         self.conn = sqlite3.connect('records.db')
         cursor = self.conn.cursor()
+        
+        # Önce mevcut tablo yapısını kontrol et
+        cursor.execute("PRAGMA table_info(entries)")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+        
+        # Hesaplar tablosunu oluştur
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS entries (
+            CREATE TABLE IF NOT EXISTS accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                type TEXT NOT NULL,
-                amount REAL NOT NULL,
-                vat_rate REAL NOT NULL,
-                vat_amount REAL NOT NULL,
-                total_amount REAL NOT NULL,
-                account TEXT NOT NULL,
-                category TEXT NOT NULL,
-                doc_no TEXT,
-                description TEXT,
+                code TEXT NOT NULL,
+                name TEXT NOT NULL,
+                full_name TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Varsayılan hesapları ekle (eğer yoksa)
+        cursor.execute("SELECT COUNT(*) FROM accounts")
+        if cursor.fetchone()[0] == 0:
+            default_accounts = [
+                ("100", "Kasa", "100 - Kasa"),
+                ("101", "Alınan Çekler", "101 - Alınan Çekler"),
+                ("102", "Banka", "102 - Banka"),
+                ("120", "Alıcılar", "120 - Alıcılar"),
+                ("320", "Satıcılar", "320 - Satıcılar")
+            ]
+            cursor.executemany("INSERT INTO accounts (code, name, full_name) VALUES (?, ?, ?)", default_accounts)
+        
+        # Eğer eski KDV sütunları varsa tabloyu yeniden oluştur
+        if any('vat_rate' in str(col) for col in columns):
+            # Mevcut verileri yedekle
+            cursor.execute("SELECT date, type, amount, account, category, doc_no, description, created_at FROM entries")
+            existing_data = cursor.fetchall()
+            
+            # Eski tabloyu sil
+            cursor.execute("DROP TABLE IF EXISTS entries")
+            
+            # Yeni tabloyu oluştur (KDV sütunları olmadan, from_to ile)
+            cursor.execute('''
+                CREATE TABLE entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    from_to TEXT,
+                    account TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    doc_no TEXT,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Mevcut verileri geri yükle (from_to alanını boş olarak)
+            for data in existing_data:
+                cursor.execute('''
+                    INSERT INTO entries (date, type, amount, from_to, account, category, doc_no, description, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (data[0], data[1], data[2], '', data[3], data[4], data[5], data[6], data[7]))
+        else:
+            # from_to sütunu yoksa ekle
+            if 'from_to' not in column_names:
+                cursor.execute("ALTER TABLE entries ADD COLUMN from_to TEXT")
+            
+            # KDV sütunları zaten yoksa normal tabloyu oluştur
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    from_to TEXT,
+                    account TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    doc_no TEXT,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        
         self.conn.commit()
+
+    def load_accounts(self):
+        """Hesapları veritabanından yükle"""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT full_name FROM accounts ORDER BY code")
+        accounts = [row[0] for row in cursor.fetchall()]
+        return accounts
+
+    def add_new_account(self):
+        """Yeni hesap ekleme dialogu"""
+        from PyQt5.QtWidgets import QDialog, QFormLayout, QDialogButtonBox
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Yeni Hesap Ekle")
+        dialog.setModal(True)
+        dialog.resize(350, 150)
+        
+        layout = QFormLayout(dialog)
+        
+        # Hesap kodu
+        code_edit = QLineEdit()
+        code_edit.setPlaceholderText("Örn: 103")
+        layout.addRow("Hesap Kodu:", code_edit)
+        
+        # Hesap adı
+        name_edit = QLineEdit() 
+        name_edit.setPlaceholderText("Örn: Kredi Kartı")
+        layout.addRow("Hesap Adı:", name_edit)
+        
+        # Butonlar
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addRow(buttons)
+        
+        if dialog.exec_() == QDialog.Accepted:
+            code = code_edit.text().strip()
+            name = name_edit.text().strip()
+            
+            if not code or not name:
+                QMessageBox.warning(self, "Uyarı", "Lütfen tüm alanları doldurun!")
+                return
+                
+            # Aynı kod var mı kontrol et
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM accounts WHERE code = ?", (code,))
+            if cursor.fetchone()[0] > 0:
+                QMessageBox.warning(self, "Uyarı", "Bu hesap kodu zaten mevcut!")
+                return
+                
+            # Yeni hesabı ekle
+            full_name = f"{code} - {name}"
+            cursor.execute(
+                "INSERT INTO accounts (code, name, full_name) VALUES (?, ?, ?)", 
+                (code, name, full_name)
+            )
+            self.conn.commit()
+            
+            # ComboBox'ı güncelle
+            self.refresh_accounts()
+            
+            # Yeni eklenen hesabı seç
+            index = self.accountCombo.findText(full_name)
+            if index >= 0:
+                self.accountCombo.setCurrentIndex(index)
+                
+            QMessageBox.information(self, "Başarılı", f"'{full_name}' hesabı eklendi!")
+
+    def delete_account(self):
+        """Seçili hesabı sil"""
+        current_account = self.accountCombo.currentText()
+        if not current_account:
+            QMessageBox.warning(self, "Uyarı", "Silinecek hesap seçilmedi!")
+            return
+            
+        # Bu hesapla işlem var mı kontrol et
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM entries WHERE account = ?", (current_account,))
+        entry_count = cursor.fetchone()[0]
+        
+        if entry_count > 0:
+            reply = QMessageBox.question(
+                self, "Uyarı", 
+                f"'{current_account}' hesabıyla {entry_count} işlem kaydı bulundu!\n\n"
+                "Bu hesabı silmek istediğinizden emin misiniz?\n"
+                "Silindikten sonra bu hesapla yapılmış işlemler görüntülenemeyebilir.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+        else:
+            reply = QMessageBox.question(
+                self, "Onay", 
+                f"'{current_account}' hesabını silmek istediğinizden emin misiniz?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+        if reply == QMessageBox.Yes:
+            # Hesabı sil
+            cursor.execute("DELETE FROM accounts WHERE full_name = ?", (current_account,))
+            self.conn.commit()
+            
+            # ComboBox'ı güncelle
+            self.refresh_accounts()
+            
+            QMessageBox.information(self, "Başarılı", f"'{current_account}' hesabı silindi!")
+
+    def refresh_accounts(self):
+        """Hesap listesini yenile"""
+        current_text = self.accountCombo.currentText()
+        self.accountCombo.clear()
+        
+        accounts = self.load_accounts()
+        self.accountCombo.addItems(accounts)
+        
+        # Önceki seçimi geri yükle (varsa)
+        index = self.accountCombo.findText(current_text)
+        if index >= 0:
+            self.accountCombo.setCurrentIndex(index)
+        elif accounts:
+            self.accountCombo.setCurrentIndex(0)
 
     def create_form_group(self):
         """Form grubu oluştur"""
@@ -166,12 +354,26 @@ class IncomeExpenseWidget(QMainWindow):
         
         form_layout.addLayout(date_layout, 0, 1)
         
-        # Tür
+        # Tür (Buton seçimi)
         form_layout.addWidget(QLabel("Tür:"), 0, 2)
-        self.typeCombo = QComboBox()
-        self.typeCombo.setObjectName("typeCombo")
-        self.typeCombo.addItems(["Gelir", "Gider"])
-        form_layout.addWidget(self.typeCombo, 0, 3)
+        
+        # Tür butonları için horizontal layout
+        type_layout = QHBoxLayout()
+        
+        self.gelirBtn = QPushButton("💰 Gelir")
+        self.gelirBtn.setObjectName("gelirBtn")
+        self.gelirBtn.setCheckable(True)
+        self.gelirBtn.setChecked(True)  # Varsayılan olarak seçili
+        self.gelirBtn.clicked.connect(self.select_gelir_type)
+        type_layout.addWidget(self.gelirBtn)
+        
+        self.giderBtn = QPushButton("💸 Gider")
+        self.giderBtn.setObjectName("giderBtn")
+        self.giderBtn.setCheckable(True)
+        self.giderBtn.clicked.connect(self.select_gider_type)
+        type_layout.addWidget(self.giderBtn)
+        
+        form_layout.addLayout(type_layout, 0, 3)
         
         # Tutar
         form_layout.addWidget(QLabel("Tutar:"), 1, 0)
@@ -181,26 +383,47 @@ class IncomeExpenseWidget(QMainWindow):
         self.amountEdit.setAlignment(Qt.AlignRight)
         form_layout.addWidget(self.amountEdit, 1, 1)
         
-        # KDV (İsteğe bağlı)
-        form_layout.addWidget(QLabel("KDV (İsteğe bağlı):"), 1, 2)
-        self.vatCombo = QComboBox()
-        self.vatCombo.setObjectName("vatCombo")
-        self.vatCombo.addItems(["KDV Yok", "%1", "%10", "%18"])
-        self.vatCombo.setCurrentText("KDV Yok")
-        form_layout.addWidget(self.vatCombo, 1, 3)
+        # Kimden/Kime (Gelir/Gider türüne göre değişir)
+        self.fromToLabel = QLabel("Kimden:")
+        form_layout.addWidget(self.fromToLabel, 1, 2)
+        self.fromToEdit = QLineEdit()
+        self.fromToEdit.setObjectName("fromToEdit")
+        self.fromToEdit.setPlaceholderText("Kişi/Kurum adı")
+        form_layout.addWidget(self.fromToEdit, 1, 3)
         
         # Hesap
         form_layout.addWidget(QLabel("Hesap:"), 2, 0)
+        
+        # Hesap kombo ve butonları için horizontal layout
+        account_layout = QHBoxLayout()
+        
         self.accountCombo = QComboBox()
         self.accountCombo.setObjectName("accountCombo")
-        self.accountCombo.addItems([
-            "100 - Kasa",
-            "101 - Alınan Çekler", 
-            "102 - Banka",
-            "120 - Alıcılar",
-            "320 - Satıcılar"
-        ])
-        form_layout.addWidget(self.accountCombo, 2, 1)
+        # Hesapları veritabanından yükle
+        accounts = self.load_accounts()
+        self.accountCombo.addItems(accounts)
+        account_layout.addWidget(self.accountCombo, 1)  # ComboBox'a daha fazla alan ver
+        
+        # Hesap ekleme butonu
+        self.addAccountBtn = QPushButton("➕")
+        self.addAccountBtn.setObjectName("addAccountBtn")
+        self.addAccountBtn.setToolTip("Yeni hesap ekle")
+        self.addAccountBtn.setMaximumWidth(35)
+        self.addAccountBtn.clicked.connect(self.add_new_account)
+        account_layout.addWidget(self.addAccountBtn)
+        
+        # Hesap silme butonu
+        self.deleteAccountBtn = QPushButton("🗑️")
+        self.deleteAccountBtn.setObjectName("deleteAccountBtn")
+        self.deleteAccountBtn.setToolTip("Seçili hesabı sil")
+        self.deleteAccountBtn.setMaximumWidth(35)
+        self.deleteAccountBtn.clicked.connect(self.delete_account)
+        account_layout.addWidget(self.deleteAccountBtn)
+        
+        # Layout'u form'a ekle
+        account_widget = QWidget()
+        account_widget.setLayout(account_layout)
+        form_layout.addWidget(account_widget, 2, 1)
         
         # Kategori
         form_layout.addWidget(QLabel("Kategori:"), 2, 2)
@@ -208,7 +431,7 @@ class IncomeExpenseWidget(QMainWindow):
         self.categoryCombo.setObjectName("categoryCombo")
         self.categoryCombo.addItems([
             "Satış", "Hizmet", "Kira", "Fatura", 
-            "Ofis", "Maaş", "Diğer"
+            "Ofis", "Maaş", "Borsa", "Diğer"
         ])
         form_layout.addWidget(self.categoryCombo, 2, 3)
         
@@ -293,7 +516,7 @@ class IncomeExpenseWidget(QMainWindow):
         self.recordsTable.setObjectName("recordsTable")
         
         # Sütun başlıkları
-        headers = ["Tarih", "Tür", "Tutar", "KDV", "Toplam", "Hesap", "Kategori", "Belge No", "Açıklama"]
+        headers = ["Tarih", "Tür", "Tutar", "Kimden/Kime", "Hesap", "Kategori", "Belge No", "Açıklama"]
         self.recordsTable.setColumnCount(len(headers))
         self.recordsTable.setHorizontalHeaderLabels(headers)
         
@@ -341,7 +564,49 @@ class IncomeExpenseWidget(QMainWindow):
         self.balanceLbl.setObjectName("balanceLbl")
         summary_layout.addWidget(self.balanceLbl)
         
+        summary_layout.addSpacing(30)
+        
+        # Borsa Gelir
+        summary_layout.addWidget(QLabel("Borsa Gelir:"))
+        self.borsaIncomeLbl = QLabel("0,00 ₺")
+        self.borsaIncomeLbl.setObjectName("borsaIncomeLbl")
+        summary_layout.addWidget(self.borsaIncomeLbl)
+        
+        summary_layout.addSpacing(20)
+        
+        # Borsa Gider
+        summary_layout.addWidget(QLabel("Borsa Gider:"))
+        self.borsaExpenseLbl = QLabel("0,00 ₺")
+        self.borsaExpenseLbl.setObjectName("borsaExpenseLbl")
+        summary_layout.addWidget(self.borsaExpenseLbl)
+        
+        summary_layout.addSpacing(20)
+        
+        # Borsa Bakiye
+        summary_layout.addWidget(QLabel("Borsa Bakiye:"))
+        self.borsaBalanceLbl = QLabel("0,00 ₺")
+        self.borsaBalanceLbl.setObjectName("borsaBalanceLbl")
+        summary_layout.addWidget(self.borsaBalanceLbl)
+        
         summary_layout.addStretch()
+
+    def select_gelir_type(self):
+        """Gelir türünü seç"""
+        self.gelirBtn.setChecked(True)
+        self.giderBtn.setChecked(False)
+        self.update_doc_number_preview()
+        self.update_from_to_label()
+    
+    def select_gider_type(self):
+        """Gider türünü seç"""
+        self.giderBtn.setChecked(True)
+        self.gelirBtn.setChecked(False)
+        self.update_doc_number_preview()
+        self.update_from_to_label()
+    
+    def get_selected_type(self):
+        """Seçili türü döndür"""
+        return "Gelir" if self.gelirBtn.isChecked() else "Gider"
 
     def connect_signals(self):
         """Sinyal bağlantıları"""
@@ -349,43 +614,82 @@ class IncomeExpenseWidget(QMainWindow):
         self.clearBtn.clicked.connect(self.clear_form)
         self.deleteBtn.clicked.connect(self.delete_record)
         self.exportBtn.clicked.connect(self.export_csv)
-        self.vatCombo.currentTextChanged.connect(self.calculate_totals)
-        self.amountEdit.textChanged.connect(self.calculate_totals)
-        self.typeCombo.currentTextChanged.connect(self.update_doc_number_preview)
         self.dateEdit.dateChanged.connect(self.update_doc_number_preview)
+
+    def update_from_to_label(self):
+        """Gelir/Gider türüne göre Kimden/Kime etiketini güncelle"""
+        record_type = self.get_selected_type()
+        if record_type == "Gelir":
+            self.fromToLabel.setText("Kimden:")
+            self.fromToEdit.setPlaceholderText("Ödeme yapan kişi/kurum")
+            # Gelir butonu için yeşil vurgu
+            self.gelirBtn.setStyleSheet("""
+                QPushButton {
+                    color: #FFFFFF;
+                    font-weight: bold;
+                    background-color: #228B22;
+                    border: 2px solid #228B22;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    min-width: 80px;
+                }
+                QPushButton:hover {
+                    background-color: #1E7B1E;
+                }
+            """)
+            self.giderBtn.setStyleSheet("""
+                QPushButton {
+                    color: #6B7280;
+                    font-weight: normal;
+                    background-color: #F9FAFB;
+                    border: 1px solid #D1D5DB;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    min-width: 80px;
+                }
+                QPushButton:hover {
+                    background-color: #F3F4F6;
+                }
+            """)
+        else:  # Gider
+            self.fromToLabel.setText("Kime:")
+            self.fromToEdit.setPlaceholderText("Ödeme alacak kişi/kurum")
+            # Gider butonu için kırmızı vurgu
+            self.giderBtn.setStyleSheet("""
+                QPushButton {
+                    color: #FFFFFF;
+                    font-weight: bold;
+                    background-color: #DC143C;
+                    border: 2px solid #DC143C;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    min-width: 80px;
+                }
+                QPushButton:hover {
+                    background-color: #B91C1C;
+                }
+            """)
+            self.gelirBtn.setStyleSheet("""
+                QPushButton {
+                    color: #6B7280;
+                    font-weight: normal;
+                    background-color: #F9FAFB;
+                    border: 1px solid #D1D5DB;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    min-width: 80px;
+                }
+                QPushButton:hover {
+                    background-color: #F3F4F6;
+                }
+            """)
 
     def update_doc_number_preview(self):
         """Belge numarası önizlemesini güncelle"""
-        record_type = self.typeCombo.currentText()
+        record_type = self.get_selected_type()
         date = self.dateEdit.date().toString("yyyy-MM-dd")
         preview_doc_no = self.generate_doc_number(record_type, date)
         self.docNoEdit.setText(preview_doc_no)
-
-    def calculate_totals(self):
-        """KDV ve toplam hesapla"""
-        try:
-            # Tutarı text'ten al ve Türkçe virgül formatını destekle
-            amount_text = self.amountEdit.text().replace(",", ".")
-            amount = float(amount_text) if amount_text else 0.0
-        except ValueError:
-            amount = 0.0
-            
-        vat_text = self.vatCombo.currentText()
-        
-        # KDV hesaplama - "KDV Yok" seçiliyse 0, diğer durumda % değerini al
-        if vat_text == "KDV Yok":
-            vat_rate = 0
-        else:
-            vat_rate = float(vat_text.replace("%", "")) / 100
-        
-        vat_amount = amount * vat_rate
-        total_amount = amount + vat_amount
-        
-        # Hesaplanan değerleri göster (görsel geri bildirim için)
-        if vat_rate > 0:
-            self.amountEdit.setToolTip(f"KDV (%{vat_rate*100:.0f}): {vat_amount:.2f} ₺\nToplam: {total_amount:.2f} ₺")
-        else:
-            self.amountEdit.setToolTip(f"KDV Yok\nToplam: {total_amount:.2f} ₺")
 
     def generate_doc_number(self, record_type, date_str):
         """Otomatik belge numarası oluştur"""
@@ -423,17 +727,8 @@ class IncomeExpenseWidget(QMainWindow):
         
         # Değerleri al
         date = self.dateEdit.date().toString("yyyy-MM-dd")
-        record_type = self.typeCombo.currentText()
-        vat_text = self.vatCombo.currentText()
-        
-        # KDV hesaplama - "KDV Yok" seçiliyse 0, diğer durumda % değerini al
-        if vat_text == "KDV Yok":
-            vat_rate = 0
-        else:
-            vat_rate = float(vat_text.replace("%", "")) / 100
-            
-        vat_amount = amount * vat_rate
-        total_amount = amount + vat_amount
+        record_type = self.get_selected_type()
+        from_to = self.fromToEdit.text().strip()
         account = self.accountCombo.currentText()
         category = self.categoryCombo.currentText()
         
@@ -444,11 +739,9 @@ class IncomeExpenseWidget(QMainWindow):
         # Veritabanına kaydet
         cursor = self.conn.cursor()
         cursor.execute('''
-            INSERT INTO entries (date, type, amount, vat_rate, vat_amount, 
-                               total_amount, account, category, doc_no, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (date, record_type, amount, vat_rate, vat_amount, total_amount,
-              account, category, doc_no, description))
+            INSERT INTO entries (date, type, amount, from_to, account, category, doc_no, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (date, record_type, amount, from_to, account, category, doc_no, description))
         self.conn.commit()
         
         # Tabloyu güncelle
@@ -461,14 +754,16 @@ class IncomeExpenseWidget(QMainWindow):
     def clear_form(self):
         """Formu temizle"""
         self.dateEdit.setDate(QDate.currentDate())
-        self.typeCombo.setCurrentText("Gelir")
+        self.gelirBtn.setChecked(True)
+        self.giderBtn.setChecked(False)
         self.amountEdit.clear()  # Boş yap
-        self.vatCombo.setCurrentText("KDV Yok")
+        self.fromToEdit.clear()
         self.accountCombo.setCurrentIndex(0)
         self.categoryCombo.setCurrentIndex(0)
         self.descEdit.clear()
-        # Belge numarası önizlemesini güncelle
+        # Belge numarası önizlemesini ve etiketleri güncelle
         self.update_doc_number_preview()
+        self.update_from_to_label()
 
     def delete_record(self):
         """Seçili kaydı sil"""
@@ -549,8 +844,7 @@ class IncomeExpenseWidget(QMainWindow):
         end_date = self.filterEndDate.date().toString("yyyy-MM-dd")
         
         cursor.execute('''
-            SELECT date, type, amount, vat_amount, total_amount, 
-                   account, category, doc_no, description 
+            SELECT date, type, amount, from_to, account, category, doc_no, description 
             FROM entries 
             WHERE date BETWEEN ? AND ?
             ORDER BY date DESC, id DESC
@@ -560,6 +854,9 @@ class IncomeExpenseWidget(QMainWindow):
         self.recordsTable.setRowCount(len(records))
         
         for row, record in enumerate(records):
+            record_type = record[1]  # Tür sütunu (Gelir/Gider)
+            category = record[5]     # Kategori sütunu
+            
             for col, value in enumerate(record):
                 item = QTableWidgetItem(str(value))
                 
@@ -573,10 +870,42 @@ class IncomeExpenseWidget(QMainWindow):
                     except:
                         item.setText(str(value))  # Hata durumunda orijinal değeri göster
                         
-                # Para formatı
-                elif col in [2, 3, 4]:  # Tutar sütunları
+                # Para formatı (tutar sütunu)
+                elif col == 2:  # Tutar sütunu
                     item.setText(f"{float(value):,.2f} ₺")
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                
+                # Renk kodlaması - Borsa işlemleri için özel renkler, diğerleri gelir yeşil, gider kırmızı
+                if category == "Borsa":
+                    # Borsa işlemleri için özel renk ayrımı
+                    if record_type == "Gelir":
+                        # Borsa geliri için sarı renk
+                        item.setBackground(Qt.GlobalColor.white)
+                        item.setForeground(QBrush(QColor(255, 215, 0)))  # Gold (sarı)
+                        # Kategori sütununa ek vurgu
+                        if col == 5:  # Kategori sütunu
+                            item.setBackground(QBrush(QColor(255, 255, 224)))  # Açık sarı arka plan
+                    else:  # Borsa gideri
+                        # Borsa gideri için turuncu renk
+                        item.setBackground(Qt.GlobalColor.white)
+                        item.setForeground(QBrush(QColor(255, 140, 0)))  # Dark Orange (turuncu)
+                        # Kategori sütununa ek vurgu
+                        if col == 5:  # Kategori sütunu
+                            item.setBackground(QBrush(QColor(255, 228, 196)))  # Açık turuncu arka plan
+                elif record_type == "Gelir":
+                    # Açık yeşil arka plan ve koyu yeşil metin
+                    item.setBackground(Qt.GlobalColor.white)
+                    item.setForeground(QBrush(QColor(34, 139, 34)))  # Forest Green
+                    # Tür sütununa ek vurgu
+                    if col == 1:  # Tür sütunu
+                        item.setBackground(QBrush(QColor(240, 255, 240)))  # Açık yeşil arka plan
+                elif record_type == "Gider":
+                    # Açık kırmızı arka plan ve koyu kırmızı metin
+                    item.setBackground(Qt.GlobalColor.white)
+                    item.setForeground(QBrush(QColor(220, 20, 60)))  # Crimson
+                    # Tür sütununa ek vurgu
+                    if col == 1:  # Tür sütunu
+                        item.setBackground(QBrush(QColor(255, 240, 240)))  # Açık kırmızı arka plan
                 
                 self.recordsTable.setItem(row, col, item)
 
@@ -584,29 +913,59 @@ class IncomeExpenseWidget(QMainWindow):
         """Özet bilgileri güncelle"""
         cursor = self.conn.cursor()
         
-        # Toplam gelir
-        cursor.execute("SELECT SUM(total_amount) FROM entries WHERE type = 'Gelir'")
+        # Toplam gelir (borsa hariç)
+        cursor.execute("SELECT SUM(amount) FROM entries WHERE type = 'Gelir' AND category != 'Borsa'")
         total_income = cursor.fetchone()[0] or 0
         
-        # Toplam gider
-        cursor.execute("SELECT SUM(total_amount) FROM entries WHERE type = 'Gider'")
+        # Toplam gider (borsa hariç)
+        cursor.execute("SELECT SUM(amount) FROM entries WHERE type = 'Gider' AND category != 'Borsa'")
         total_expense = cursor.fetchone()[0] or 0
         
-        # Bakiye
-        balance = total_income - total_expense
+        # Borsa gelir
+        cursor.execute("SELECT SUM(amount) FROM entries WHERE type = 'Gelir' AND category = 'Borsa'")
+        borsa_income = cursor.fetchone()[0] or 0
         
-        # Etiketleri güncelle
+        # Borsa gider
+        cursor.execute("SELECT SUM(amount) FROM entries WHERE type = 'Gider' AND category = 'Borsa'")
+        borsa_expense = cursor.fetchone()[0] or 0
+        
+        # Bakiye hesaplamaları
+        balance = total_income - total_expense
+        borsa_balance = borsa_income - borsa_expense
+        
+        # Normal gelir/gider etiketlerini güncelle
         self.totalIncomeLbl.setText(f"{total_income:,.2f} ₺")
+        self.totalIncomeLbl.setStyleSheet("color: #228B22; font-weight: bold; font-size: 14px;")  # Yeşil
+        
         self.totalExpenseLbl.setText(f"{total_expense:,.2f} ₺")
+        self.totalExpenseLbl.setStyleSheet("color: #DC143C; font-weight: bold; font-size: 14px;")  # Kırmızı
+        
         self.balanceLbl.setText(f"{balance:,.2f} ₺")
         
-        # Bakiye rengini ayarla
+        # Normal bakiye rengini ayarla
         if balance > 0:
-            self.balanceLbl.setStyleSheet("color: #10B981; font-weight: bold;")
+            self.balanceLbl.setStyleSheet("color: #10B981; font-weight: bold; font-size: 16px;")  # Yeşil (Kar)
         elif balance < 0:
-            self.balanceLbl.setStyleSheet("color: #EF4444; font-weight: bold;")
+            self.balanceLbl.setStyleSheet("color: #EF4444; font-weight: bold; font-size: 16px;")  # Kırmızı (Zarar)
         else:
-            self.balanceLbl.setStyleSheet("color: #6B7280; font-weight: bold;")
+            self.balanceLbl.setStyleSheet("color: #6B7280; font-weight: bold; font-size: 16px;")  # Gri (Sıfır)
+        
+        # Borsa etiketlerini güncelle
+        self.borsaIncomeLbl.setText(f"{borsa_income:,.2f} ₺")
+        self.borsaIncomeLbl.setStyleSheet("color: #FFD700; font-weight: bold; font-size: 14px;")  # Sarı (Gold)
+        
+        self.borsaExpenseLbl.setText(f"{borsa_expense:,.2f} ₺")
+        self.borsaExpenseLbl.setStyleSheet("color: #FF8C00; font-weight: bold; font-size: 14px;")  # Turuncu (Dark Orange)
+        
+        self.borsaBalanceLbl.setText(f"{borsa_balance:,.2f} ₺")
+        
+        # Borsa bakiye rengini ayarla
+        if borsa_balance > 0:
+            self.borsaBalanceLbl.setStyleSheet("color: #FFD700; font-weight: bold; font-size: 16px;")  # Sarı (Kar)
+        elif borsa_balance < 0:
+            self.borsaBalanceLbl.setStyleSheet("color: #FF8C00; font-weight: bold; font-size: 16px;")  # Turuncu (Zarar)
+        else:
+            self.borsaBalanceLbl.setStyleSheet("color: #6B7280; font-weight: bold; font-size: 16px;")  # Gri (Sıfır)
 
     def apply_styles(self):
         """Stil uygula"""
@@ -712,8 +1071,84 @@ class IncomeExpenseWidget(QMainWindow):
             background-color: #4B5563;
         }
         
+        QPushButton#gelirBtn {
+            color: #FFFFFF;
+            font-weight: bold;
+            background-color: #228B22;
+            border: 2px solid #228B22;
+            border-radius: 6px;
+            padding: 8px 16px;
+            min-width: 80px;
+        }
+        
+        QPushButton#gelirBtn:hover {
+            background-color: #1E7B1E;
+        }
+        
+        QPushButton#giderBtn {
+            color: #6B7280;
+            font-weight: normal;
+            background-color: #F9FAFB;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            padding: 8px 16px;
+            min-width: 80px;
+        }
+        
+        QPushButton#giderBtn:hover {
+            background-color: #F3F4F6;
+        }
+        
+        QPushButton#addAccountBtn {
+            background-color: #10B981;
+            color: #FFFFFF;
+            border: 1px solid #10B981;
+            border-radius: 4px;
+            padding: 4px 8px;
+            min-width: 30px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        QPushButton#addAccountBtn:hover {
+            background-color: #059669;
+        }
+        
+        QPushButton#deleteAccountBtn {
+            background-color: #EF4444;
+            color: #FFFFFF;
+            border: 1px solid #EF4444;
+            border-radius: 4px;
+            padding: 4px 8px;
+            min-width: 30px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        QPushButton#deleteAccountBtn:hover {
+            background-color: #DC2626;
+        }
+        
         QPushButton:hover {
             background-color: #F3F4F6;
+        }
+        
+        QLabel#borsaIncomeLbl {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        QLabel#borsaExpenseLbl {
+            color: #FF8C00;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        QLabel#borsaBalanceLbl {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 14px;
         }
         
         QTableWidget {

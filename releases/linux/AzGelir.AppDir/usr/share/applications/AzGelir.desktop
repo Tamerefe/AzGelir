@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AzGelir
+Comment=Gelir ve Gider Takip Uygulamasý
+Exec=AzGelir
+Icon=azgelir
+StartupWMClass=AzGelir
+Categories=Office;Finance;

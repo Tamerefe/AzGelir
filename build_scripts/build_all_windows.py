@@ -54,7 +54,7 @@ def build_executable():
     """PyInstaller ile exe oluştur"""
     print("\n💻 Windows exe dosyası oluşturuluyor...")
     try:
-        subprocess.check_call([sys.executable, "build_windows.py"])
+        subprocess.check_call([sys.executable, "build_scripts/build_windows.py"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Exe oluşturma hatası: {e}")
@@ -64,7 +64,7 @@ def build_msi():
     """MSI installer oluştur"""
     print("\n📦 MSI installer oluşturuluyor...")
     try:
-        subprocess.check_call([sys.executable, "build_msi.py"])
+        subprocess.check_call([sys.executable, "build_scripts/build_msi.py"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ MSI oluşturma hatası: {e}")

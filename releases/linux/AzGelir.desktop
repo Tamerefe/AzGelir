@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AzGelir
+Name[tr]=AzGelir - Gelir/Gider Takip
+Comment=Gelir ve Gider Takip Uygulaması
+Comment[tr]=Muhasebe odaklı gelir ve gider takip sistemi
+Exec=./AzGelir
+Icon=azgelir
+Terminal=false
+StartupWMClass=AzGelir
+Categories=Office;Finance;
+Keywords=gelir;gider;muhasebe;finans;
